@@ -34,8 +34,8 @@ export function QuizScreen() {
     socialState,
     updateSocialState,
     completeLevel,
-    updateMeetingProgress, // Use updateMeetingProgress from useGameState hook
-    useHelp, // Get useHelp function from use-game-state at top level
+    updateMeetingProgress,
+    useHelp,
   } = useGameState()
 
   // Local component state for quiz interaction
@@ -92,14 +92,14 @@ export function QuizScreen() {
    * Provides smooth progression without manual button clicks
    */
   useEffect(() => {
-    if (showResult) {
+    if (showResult && !showHelpOption) {
       const autoAdvanceTimer = setTimeout(() => {
         handleNextQuestion()
-      }, 2000) // 2-second delay to show result
+      }, 2000)
 
       return () => clearTimeout(autoAdvanceTimer)
     }
-  }, [showResult])
+  }, [showResult, showHelpOption])
 
   /**
    * Handle Answer Selection
@@ -191,16 +191,6 @@ export function QuizScreen() {
   const handleNextQuestion = () => {
     const totalQuestions = currentLevelData?.questions.length || 0
 
-    console.log("[v0] handleNextQuestion - Current state:", {
-      currentQuest,
-      currentLevel,
-      currentQuestion: quizProgress.currentQuestion,
-      totalQuestions,
-      retryMode,
-      missedQuestions: missedQuestions.length,
-      score: quizProgress.score,
-    })
-
     if (retryMode && missedQuestions.length > 0) {
       updateQuizProgress({
         currentQuestion: missedQuestions[0],
@@ -212,42 +202,31 @@ export function QuizScreen() {
     const isLastQuestion = retryMode ? missedQuestions.length === 0 : quizProgress.currentQuestion >= totalQuestions - 1
 
     if (isLastQuestion) {
-      // End of level/retry - check if 100% score achieved
       const perfectScore = quizProgress.score === totalQuestions
 
-      console.log("[v0] Level completion check:", { perfectScore, helpUsed, missedQuestions: missedQuestions.length })
-
-      if (!perfectScore && !helpUsed) {
-        if (missedQuestions.length > 0) {
-          // Show retry options instead of auto-restarting
-          return
-        }
+      if (!perfectScore && !helpUsed && missedQuestions.length === 0) {
         handleFullRestart()
         return
       }
 
-      console.log("[v0] Completing level:", currentQuest, currentLevel)
+      if (!perfectScore && missedQuestions.length > 0) {
+        setShowResult(false)
+        return
+      }
+
       completeLevel(currentQuest, currentLevel)
 
       const totalLevelsInQuest = currentQuestData?.levels.length || 3
       const isLastLevelInQuest = currentLevel >= totalLevelsInQuest
-
-      console.log("[v0] Level progression check:", {
-        currentLevel,
-        totalLevelsInQuest,
-        isLastLevelInQuest,
-      })
 
       if (isLastLevelInQuest) {
         updateMeetingProgress({
           currentDialogue: 0,
           bossLevel: currentQuest,
         })
-        console.log("[v0] Moving to meeting for quest", currentQuest)
         setCurrentScreen("meeting")
       } else {
         const nextLevel = currentLevel + 1
-        console.log("[v0] Moving to next level:", nextLevel)
         setCurrentLevel(nextLevel)
 
         updateQuizProgress({
@@ -255,9 +234,14 @@ export function QuizScreen() {
           score: 0,
           answers: [],
         })
+
+        setRetryMode(false)
+        setMissedQuestions([])
+        setSelectedAnswer(null)
+        setShowResult(false)
+        setTimeLeft(5)
       }
     } else {
-      // Move to next question
       updateQuizProgress({
         currentQuestion: quizProgress.currentQuestion + 1,
       })
@@ -508,9 +492,20 @@ export function QuizScreen() {
                   )}
                 </div>
 
-                <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded border">
-                  <ArrowRight className="h-4 w-4 inline mr-1" />
-                  Auto-advancing in 2 seconds...
+                <div className="flex flex-col gap-3 items-center">
+                  <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded border">
+                    <ArrowRight className="h-4 w-4 inline mr-1" />
+                    Auto-advancing in 2 seconds...
+                  </div>
+
+                  <Button
+                    onClick={handleNextQuestion}
+                    variant="outline"
+                    size="sm"
+                    className="border-amber-300 text-amber-700 hover:bg-amber-50 bg-transparent"
+                  >
+                    Continue Now
+                  </Button>
                 </div>
               </div>
             )}
