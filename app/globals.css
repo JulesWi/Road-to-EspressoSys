@@ -1,5 +1,5 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
+@import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -37,6 +37,13 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Added coffee-themed game variables */
+  --coffee-brown: #8b4513;
+  --coffee-light: #d2b48c;
+  --coffee-dark: #654321;
+  --espresso-orange: #ff8c00;
+  --cafe-cream: #f5f5dc;
 }
 
 .dark {
@@ -119,5 +126,60 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Added game-specific base styles */
+  .coffee-gradient {
+    background: linear-gradient(135deg, #d2b48c 0%, #8b4513 50%, #654321 100%);
+  }
+
+  .puzzle-piece {
+    transition: all 0.3s ease;
+    cursor: grab;
+  }
+
+  .puzzle-piece:active {
+    cursor: grabbing;
+    transform: scale(1.05);
+  }
+
+  .quiz-option {
+    transition: all 0.2s ease;
+  }
+
+  .quiz-option:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .dialogue-bubble {
+    animation: fadeInUp 0.5s ease-out;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .typing-animation::after {
+    content: "|";
+    animation: blink 1s infinite;
+  }
+
+  @keyframes blink {
+    0%,
+    50% {
+      opacity: 1;
+    }
+    51%,
+    100% {
+      opacity: 0;
+    }
   }
 }

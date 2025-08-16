@@ -27,6 +27,9 @@ interface GameStore extends GameState {
   unlockNextQuest: () => void
   unlockNextLevel: () => void
   useHelp: (creditCost: number) => boolean
+
+  downloadCertificate: (questId: number) => void
+  getCertificateUrl: (questId: number) => string
 }
 
 const initialState: GameState = {
@@ -85,8 +88,9 @@ export const useGameState = create<GameStore>()(
 
       setCurrentScreen: (currentScreen) => set({ currentScreen }),
 
-      setCurrentQuest: (currentQuest) => {
-        set({ currentQuest, currentLevel: 1 })
+      setCurrentLevel: (currentLevel) => {
+        console.log("[v0] Setting current level to:", currentLevel)
+        set({ currentLevel })
         set({
           quizProgress: {
             currentQuestion: 0,
@@ -96,8 +100,8 @@ export const useGameState = create<GameStore>()(
         })
       },
 
-      setCurrentLevel: (currentLevel) => {
-        set({ currentLevel })
+      setCurrentQuest: (currentQuest) => {
+        set({ currentQuest, currentLevel: 1 })
         set({
           quizProgress: {
             currentQuestion: 0,
@@ -137,17 +141,24 @@ export const useGameState = create<GameStore>()(
         set((state) => {
           if (!state.player) return state
 
+          console.log("[v0] Completing level:", questId, levelId)
+
           const levelKey = { questId, levelId }
           const isAlreadyCompleted = state.player.completedLevels.some(
             (level) => level.questId === questId && level.levelId === levelId,
           )
-          if (isAlreadyCompleted) return state
+
+          if (isAlreadyCompleted) {
+            console.log("[v0] Level already completed:", questId, levelId)
+            return state
+          }
 
           const updatedPlayer = {
             ...state.player,
             completedLevels: [...state.player.completedLevels, levelKey],
           }
 
+          console.log("[v0] Updated completed levels:", updatedPlayer.completedLevels)
           return { player: updatedPlayer }
         }),
 
@@ -174,11 +185,24 @@ export const useGameState = create<GameStore>()(
 
         if (state.socialState.seasonEnded) return false
 
+        console.log("[v0] Checking level access:", questId, levelId, {
+          completedLevels: state.player.completedLevels,
+          canAccessQuest: state.canAccessQuest(questId),
+        })
+
         // First level of accessible quest is always accessible
-        if (levelId === 1 && state.canAccessQuest(questId)) return true
+        if (levelId === 1 && state.canAccessQuest(questId)) {
+          console.log("[v0] First level of accessible quest - granted")
+          return true
+        }
 
         // Other levels require previous level completion
-        return state.player.completedLevels.some((level) => level.questId === questId && level.levelId === levelId - 1)
+        const hasCompletedPrevious = state.player.completedLevels.some(
+          (level) => level.questId === questId && level.levelId === levelId - 1,
+        )
+
+        console.log("[v0] Previous level completion check:", hasCompletedPrevious)
+        return hasCompletedPrevious
       },
 
       getPlayerProgress: () => {
@@ -243,6 +267,36 @@ export const useGameState = create<GameStore>()(
         set({ ...initialState, socialState: initialSocialState })
         // Clear persisted state to ensure complete reset
         localStorage.removeItem("espresso-quest-game")
+      },
+
+      downloadCertificate: (questId: number) => {
+        const certificateImages = [
+          "/images/certificates/certificate-1.png",
+          "/images/certificates/certificate-2.png",
+          "/images/certificates/certificate-3.png",
+          "/images/certificates/certificate-4.png",
+        ]
+
+        const certificateUrl = certificateImages[questId - 1] || certificateImages[0]
+        const state = get()
+        const playerName = state.player?.name || "Player"
+
+        const link = document.createElement("a")
+        link.href = certificateUrl
+        link.download = `espresso-quest-${questId}-certificate-${playerName.replace(/\s+/g, "-").toLowerCase()}.png`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      },
+
+      getCertificateUrl: (questId: number) => {
+        const certificateImages = [
+          "/images/certificates/certificate-1.png",
+          "/images/certificates/certificate-2.png",
+          "/images/certificates/certificate-3.png",
+          "/images/certificates/certificate-4.png",
+        ]
+        return certificateImages[questId - 1] || certificateImages[0]
       },
     }),
     {

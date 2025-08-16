@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { useGameState } from "@/hooks/use-game-state"
 import { QUEST_THEMES, BOSS_DIALOGUES } from "@/lib/game-state"
 import { Coffee, Trophy } from "lucide-react"
+import { CertificateAnimation } from "./certificate-animation"
 
 interface DialogueBubble {
   speaker: "player" | "boss"
@@ -29,6 +30,7 @@ export function MeetingScreen() {
   const [displayedText, setDisplayedText] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [autoAdvance, setAutoAdvance] = useState(true) // Auto-advance dialogues
+  const [showCertificate, setShowCertificate] = useState(false)
 
   const currentQuestData = QUEST_THEMES.find((q) => q.id === currentQuest)
   const bossDialogues = BOSS_DIALOGUES[currentQuest as keyof typeof BOSS_DIALOGUES] || []
@@ -38,7 +40,7 @@ export function MeetingScreen() {
   const fullConversation: DialogueBubble[] = [
     {
       speaker: "player",
-      text: `Bonjour ! Je viens de terminer tous les niveaux sur ${currentQuestData?.title.toLowerCase()}. J'ai hâte de discuter avec vous !`,
+      text: `Hello! I just completed all levels on ${currentQuestData?.title.toLowerCase()}. I'm excited to discuss with you!`,
     },
     ...bossDialogues.map((dialogue) => ({
       speaker: "boss" as const,
@@ -47,11 +49,11 @@ export function MeetingScreen() {
     })),
     {
       speaker: "player",
-      text: "Merci beaucoup pour cet échange enrichissant ! J'ai appris énormément et je suis motivé pour la suite de mon parcours.",
+      text: "Thank you so much for this enriching exchange! I learned tremendously and I'm motivated for the next steps in my journey.",
     },
     {
       speaker: "boss",
-      text: "C'était un plaisir de vous rencontrer. Votre progression est impressionnante. Bonne chance pour la suite de votre aventure chez Espresso !",
+      text: "It was a pleasure meeting you. Your progress is impressive. Good luck with the rest of your adventure at Espresso!",
       emotion: "encouraging",
     },
   ]
@@ -60,27 +62,14 @@ export function MeetingScreen() {
   useEffect(() => {
     if (currentDialogue < fullConversation.length) {
       const dialogue = fullConversation[currentDialogue]
-      setIsTyping(true)
-      setDisplayedText("")
+      setDisplayedText(dialogue.text) // Show text immediately
+      setIsTyping(false)
 
-      let index = 0
-      const timer = setInterval(() => {
-        if (index < dialogue.text.length) {
-          setDisplayedText(dialogue.text.slice(0, index + 1))
-          index++
-        } else {
-          setIsTyping(false)
-          clearInterval(timer)
-
-          if (autoAdvance && currentDialogue < fullConversation.length - 1) {
-            setTimeout(() => {
-              setCurrentDialogue((prev) => prev + 1)
-            }, 3000)
-          }
-        }
-      }, 30) // Faster typing speed
-
-      return () => clearInterval(timer)
+      if (autoAdvance && currentDialogue < fullConversation.length - 1) {
+        setTimeout(() => {
+          setCurrentDialogue((prev) => prev + 1)
+        }, 3000)
+      }
     }
   }, [currentDialogue, autoAdvance])
 
@@ -96,7 +85,12 @@ export function MeetingScreen() {
   }, [currentDialogue, isTyping])
 
   const handleMeetingComplete = () => {
+    setShowCertificate(true)
+  }
+
+  const handleCertificateComplete = () => {
     unlockNextQuest()
+    setShowCertificate(false)
 
     if (currentQuest < QUEST_THEMES.length) {
       // Go back to hub to show progress
@@ -136,6 +130,17 @@ export function MeetingScreen() {
     }
   }
 
+  if (showCertificate) {
+    return (
+      <CertificateAnimation
+        questId={currentQuest}
+        questTitle={currentQuestData?.title || "Unknown Quest"}
+        playerName={player?.name || "Player"}
+        onComplete={handleCertificateComplete}
+      />
+    )
+  }
+
   if (currentDialogue >= fullConversation.length) {
     return null
   }
@@ -162,13 +167,13 @@ export function MeetingScreen() {
               <div className="flex items-center gap-4">
                 <Coffee className="h-8 w-8 text-amber-600" />
                 <div>
-                  <h1 className="text-2xl font-bold text-amber-900">Café Espresso</h1>
-                  <p className="text-amber-700">Rencontre avec {currentQuestData?.boss}</p>
+                  <h1 className="text-2xl font-bold text-amber-900">Espresso Café</h1>
+                  <p className="text-amber-700">Meeting with {currentQuestData?.boss}</p>
                 </div>
               </div>
               <div className="text-right">
                 <Badge variant="secondary" className="bg-amber-100 text-amber-800 mb-1">
-                  Niveau {currentQuest}
+                  Level {currentQuest}
                 </Badge>
                 <div className="text-xs text-amber-600">
                   Progression: {progress.completed + 1}/{progress.total}
@@ -204,7 +209,7 @@ export function MeetingScreen() {
               <div className="w-20 h-16 bg-amber-900 rounded-full shadow-lg flex items-center justify-center mb-2">
                 <Coffee className="h-8 w-8 text-amber-200" />
               </div>
-              <div className="text-xs text-white/60">Table de café</div>
+              <div className="text-xs text-white/60">Coffee Table</div>
             </div>
 
             {/* Boss Avatar - Seated */}
@@ -297,7 +302,7 @@ export function MeetingScreen() {
               size="sm"
               className="bg-white/20 border-white/30 text-white hover:bg-white/30"
             >
-              {autoAdvance ? "Mode Manuel" : "Mode Auto"}
+              {autoAdvance ? "Manual Mode" : "Auto Mode"}
             </Button>
           </div>
         </div>

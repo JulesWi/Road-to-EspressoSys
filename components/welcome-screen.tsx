@@ -81,7 +81,7 @@ export function WelcomeScreen() {
             <div className="flex flex-col items-center text-center p-6 bg-gradient-to-b from-amber-200 to-amber-300 rounded-xl border-2 border-amber-400">
               <Users className="h-10 w-10 text-amber-800 mb-3" />
               <h3 className="font-bold text-amber-900 text-lg">Boss Meetings</h3>
-              <p className="text-sm text-amber-700">Café conversations</p>
+              <p className="text-sm text-amber-700">Coffee conversations</p>
             </div>
 
             <div className="flex flex-col items-center text-center p-6 bg-gradient-to-b from-amber-200 to-amber-300 rounded-xl border-2 border-amber-400">

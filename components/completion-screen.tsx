@@ -94,14 +94,14 @@ export function CompletionScreen() {
           </div>
 
           <div className="space-y-2">
-            <CardTitle className="text-4xl font-bold text-amber-900">Félicitations !</CardTitle>
+            <CardTitle className="text-4xl font-bold text-amber-900">Congratulations!</CardTitle>
             <CardDescription className="text-xl text-amber-700">
-              Vous avez terminé votre parcours Espresso Quest
+              You have completed your Espresso Quest journey
             </CardDescription>
           </div>
 
           <Badge variant="secondary" className="bg-green-100 text-green-800 text-lg px-4 py-2">
-            Quête Maîtrisée • {progress.percentage}% Complété
+            Quest Mastered • {progress.percentage}% Completed
           </Badge>
         </CardHeader>
 
@@ -111,7 +111,7 @@ export function CompletionScreen() {
             <div className="text-center space-y-4">
               <div className="flex items-center justify-center gap-2 mb-4">
                 <Coffee className="h-6 w-6 text-amber-600" />
-                <h3 className="text-xl font-semibold text-amber-900">Résumé de votre Parcours</h3>
+                <h3 className="text-xl font-semibold text-amber-900">Your Journey Summary</h3>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -123,12 +123,12 @@ export function CompletionScreen() {
                   <div className="text-2xl font-bold text-amber-900">
                     {progress.completed}/{progress.total}
                   </div>
-                  <div className="text-sm text-amber-700">Niveaux Complétés</div>
+                  <div className="text-sm text-amber-700">Levels Completed</div>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <h4 className="font-semibold text-amber-900">Rencontres Réalisées :</h4>
+                <h4 className="font-semibold text-amber-900">Meetings Completed:</h4>
                 <div className="flex flex-wrap justify-center gap-2">
                   {QUEST_THEMES.map((quest) => (
                     <Badge key={quest.id} variant="outline" className="bg-white border-amber-300 text-amber-800">
@@ -143,10 +143,10 @@ export function CompletionScreen() {
           {/* Final NFT Section */}
           <div className="bg-gradient-to-r from-amber-100 to-yellow-100 p-6 rounded-lg border border-amber-300">
             <div className="text-center space-y-4">
-              <h3 className="text-xl font-semibold text-amber-900">NFT Composable Master</h3>
+              <h3 className="text-xl font-semibold text-amber-900">Master Composable NFT</h3>
               <p className="text-amber-700">
-                Vous avez débloqué le NFT Master d'Espresso ! Ce token unique certifie votre maîtrise complète de
-                l'écosystème Espresso et votre readiness pour rejoindre la fondation.
+                You have unlocked the Espresso Master NFT! This unique token certifies your complete mastery of the
+                Espresso ecosystem and your readiness to join the foundation.
               </p>
 
               <div className="w-32 h-32 mx-auto bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center border-4 border-white shadow-lg">
@@ -155,17 +155,17 @@ export function CompletionScreen() {
 
               <Button onClick={downloadFinalNFT} size="lg" className="bg-amber-600 hover:bg-amber-700 text-white px-8">
                 <Download className="h-5 w-5 mr-2" />
-                Télécharger NFT Master
+                Download Master NFT
               </Button>
             </div>
           </div>
 
           {/* Next Steps */}
           <div className="text-center space-y-4">
-            <h3 className="text-lg font-semibold text-amber-900">Et Maintenant ?</h3>
+            <h3 className="text-lg font-semibold text-amber-900">What's Next?</h3>
             <p className="text-amber-700">
-              Votre parcours dans Espresso Quest est terminé, mais votre aventure avec Espresso ne fait que commencer !
-              Utilisez vos connaissances pour contribuer à l'écosystème et rejoindre notre communauté.
+              Your journey in Espresso Quest is complete, but your adventure with Espresso is just beginning! Use your
+              knowledge to contribute to the ecosystem and join our community.
             </p>
 
             <div className="flex gap-4 justify-center">
@@ -175,7 +175,7 @@ export function CompletionScreen() {
                 className="border-amber-300 text-amber-700 hover:bg-amber-50 bg-transparent"
               >
                 <RotateCcw className="h-4 w-4 mr-2" />
-                Rejouer
+                Play Again
               </Button>
 
               <Button
@@ -183,7 +183,7 @@ export function CompletionScreen() {
                 className="bg-amber-600 hover:bg-amber-700 text-white"
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
-                Visiter Espresso
+                Visit Espresso
               </Button>
             </div>
           </div>
