@@ -57,6 +57,19 @@ export function QuizScreen() {
   const currentLevelData = currentQuestData?.levels.find((l) => l.id === currentLevel)
   const currentQuestion = currentLevelData?.questions[quizProgress.currentQuestion]
 
+  // Hook for help usage
+  const handleUseHelp = (cost: number) => {
+    if (!player || !socialState) return false
+
+    if ((socialState?.helpUsed || 0) + cost > 9) return false // Not enough credits
+
+    updateSocialState({
+      helpUsed: (socialState?.helpUsed || 0) + cost,
+    })
+
+    return true
+  }
+
   /**
    * Timer Effect
    * Counts down from 5 seconds, shows help option when time expires
@@ -94,7 +107,7 @@ export function QuizScreen() {
    * Provides smooth progression without manual button clicks
    */
   useEffect(() => {
-    if (showResult && !showHelpOption) {
+    if (showResult && !showHelpOption && !showRetryOptions) {
       const totalQuestions = currentLevelData?.questions.length || 0
       const isLastQuestion = quizProgress.currentQuestion >= totalQuestions - 1
       const hasWrongAnswer = selectedAnswer !== currentQuestion?.correct && selectedAnswer !== null
@@ -115,7 +128,7 @@ export function QuizScreen() {
         return () => clearTimeout(autoAdvanceTimer)
       }
     }
-  }, [showResult, showHelpOption, selectedAnswer, currentQuestion, quizProgress.currentQuestion])
+  }, [showResult, showHelpOption, showRetryOptions, selectedAnswer, currentQuestion, quizProgress.currentQuestion])
 
   /**
    * Handle Answer Selection
@@ -154,21 +167,20 @@ export function QuizScreen() {
    * Allows player to skip question using credits, tracks help usage
    */
   const handleUseHelpToContinue = () => {
-    if (!player || !socialState) return
-
     const missedCount = missedQuestions.length + 1 // +1 for current question
-    const helpCost = Math.min(Math.max(missedCount * 2, 1), 10)
-    setHelpCost(helpCost)
+    const calculatedHelpCost = Math.min(Math.max(missedCount * 2, 1), 10)
+    setHelpCost(calculatedHelpCost)
 
-    if ((socialState?.helpUsed || 0) + helpCost > 9) return // Not enough credits
+    const success = handleUseHelp(calculatedHelpCost)
+    if (success) {
+      setHelpUsed(true)
 
-    setHelpUsed(true)
-
-    updateQuizProgress({
-      currentQuestion: quizProgress.currentQuestion + 1,
-      score: quizProgress.score + 1,
-    })
-    setShowHelpOption(false)
+      updateQuizProgress({
+        currentQuestion: quizProgress.currentQuestion + 1,
+        score: quizProgress.score + 1,
+      })
+      setShowHelpOption(false)
+    }
   }
 
   /**
@@ -242,15 +254,11 @@ export function QuizScreen() {
 
       console.log("[v0] Level completion check:", { perfectScore, helpUsed, missedQuestions: missedQuestions.length })
 
-      // If not perfect score and no help used, handle retry
+      // If not perfect score and no help used, show retry options instead of restarting
       if (!perfectScore && !helpUsed) {
-        if (missedQuestions.length > 0) {
-          // Don't auto-restart, let retry options handle it
-          return
-        }
-        // If no missed questions tracked but score isn't perfect, restart
-        handleFullRestart()
-        return
+        console.log("[v0] Level failed - showing retry options")
+        setShowRetryOptions(true)
+        return // Prevent further execution that could cause loops
       }
 
       // Perfect score or help was used - complete the level
@@ -427,27 +435,22 @@ export function QuizScreen() {
                   <Button
                     onClick={handleUseHelpToContinue}
                     className="bg-yellow-600 hover:bg-yellow-700 text-white"
-                    disabled={(socialState?.helpUsed || 0) + helpCost > 9}
+                    disabled={
+                      (socialState?.helpUsed || 0) + Math.min(Math.max(missedQuestions.length + 1, 1) * 2, 10) > 9
+                    }
                   >
-                    Ask for Help ({helpCost} credits)
+                    Ask for Help ({Math.min(Math.max(missedQuestions.length + 1, 1) * 2, 10)} credits)
                   </Button>
-                  {missedQuestions.length > 0 && (
-                    <Button
-                      variant="outline"
-                      onClick={handleRetryMissedOnly}
-                      className="border-blue-300 text-blue-700 hover:bg-blue-50 bg-transparent"
-                    >
-                      <RotateCcw className="h-4 w-4 mr-2" />
-                      Retry Missed Only ({missedQuestions.length + 1})
-                    </Button>
-                  )}
                   <Button
                     variant="outline"
-                    onClick={handleFullRestart}
-                    className="border-red-300 text-red-700 hover:bg-red-50 bg-transparent"
+                    onClick={() => {
+                      setShowHelpOption(false)
+                      setShowRetryOptions(true)
+                    }}
+                    className="border-blue-300 text-blue-700 hover:bg-blue-50 bg-transparent"
                   >
                     <RotateCcw className="h-4 w-4 mr-2" />
-                    Restart Level
+                    Choose Restart Option
                   </Button>
                 </div>
               </div>
@@ -458,34 +461,60 @@ export function QuizScreen() {
               <div className="bg-red-50 border border-red-200 p-4 rounded-lg text-center">
                 <div className="flex items-center justify-center gap-2 mb-3">
                   <AlertTriangle className="h-5 w-5 text-red-600" />
-                  <span className="font-semibold text-red-800">Level Failed - 100% Required</span>
+                  <span className="font-semibold text-red-800">Choose Your Next Step</span>
                 </div>
                 <p className="text-sm text-red-700 mb-4">
-                  You need to answer all questions correctly. Choose how to retry:
+                  {missedQuestions.length > 0
+                    ? `You have ${missedQuestions.length} missed questions. Choose how to proceed:`
+                    : "You need to answer all questions correctly. Choose how to retry:"}
                 </p>
                 <div className="flex gap-2 justify-center flex-wrap">
                   {missedQuestions.length > 0 && (
-                    <Button
-                      onClick={() => {
-                        setShowRetryOptions(false)
-                        handleRetryMissedOnly()
-                      }}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                    >
+                    <Button onClick={handleRetryMissedOnly} className="bg-blue-600 hover:bg-blue-700 text-white">
                       <RotateCcw className="h-4 w-4 mr-2" />
                       Retry Missed Only ({missedQuestions.length} questions)
                     </Button>
                   )}
                   <Button
-                    onClick={() => {
-                      setShowRetryOptions(false)
-                      handleFullRestart()
-                    }}
+                    onClick={handleFullRestart}
                     variant="outline"
                     className="border-red-300 text-red-700 hover:bg-red-50 bg-transparent"
                   >
                     <RotateCcw className="h-4 w-4 mr-2" />
                     Restart Entire Level
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      const calculatedHelpCost = Math.min(Math.max(missedQuestions.length + 1, 1) * 2, 10)
+                      const success = handleUseHelp(calculatedHelpCost)
+                      if (success) {
+                        setShowRetryOptions(false)
+                        // Complete the level with help
+                        completeLevel(currentQuest, currentLevel)
+                        const totalLevelsInQuest = currentQuestData?.levels.length || 3
+                        const isLastLevelInQuest = currentLevel >= totalLevelsInQuest
+
+                        if (isLastLevelInQuest) {
+                          updateMeetingProgress({ currentDialogue: 0, bossLevel: currentQuest })
+                          setCurrentScreen("meeting")
+                        } else {
+                          setCurrentLevel(currentLevel + 1)
+                          updateQuizProgress({ currentQuestion: 0, score: 0, answers: [] })
+                          setRetryMode(false)
+                          setMissedQuestions([])
+                          setSelectedAnswer(null)
+                          setShowResult(false)
+                          setShowHelpOption(false)
+                          setTimeLeft(5)
+                        }
+                      }
+                    }}
+                    className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                    disabled={
+                      (socialState?.helpUsed || 0) + Math.min(Math.max(missedQuestions.length + 1, 1) * 2, 10) > 9
+                    }
+                  >
+                    Ask for Help ({Math.min(Math.max(missedQuestions.length + 1, 1) * 2, 10)} credits)
                   </Button>
                 </div>
               </div>
