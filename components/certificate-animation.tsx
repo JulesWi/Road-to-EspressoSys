@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Download, Trophy, Star, Sparkles } from "lucide-react"
+import { SocialShare } from "./social-share"
 
 interface CertificateAnimationProps {
   questId: number
@@ -168,6 +169,14 @@ export function CertificateAnimation({ questId, questTitle, playerName, onComple
                 >
                   Continue Journey
                 </Button>
+              </div>
+
+              <div className="mt-6">
+                <SocialShare
+                  achievement={`Quest ${questId} Completed!`}
+                  description={`Just completed ${questTitle} in Espresso Quest! 🏆`}
+                  url="https://espressosys.com"
+                />
               </div>
             </CardContent>
           </Card>

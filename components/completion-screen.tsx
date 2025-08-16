@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { useGameState } from "@/hooks/use-game-state"
 import { QUEST_THEMES } from "@/lib/game-state"
 import { Trophy, Download, Star, Coffee, RotateCcw, ExternalLink } from "lucide-react"
+import { SocialShare } from "./social-share"
 
 export function CompletionScreen() {
   const { player, resetGame, getPlayerProgress } = useGameState()
@@ -186,6 +187,15 @@ export function CompletionScreen() {
                 Visit Espresso
               </Button>
             </div>
+          </div>
+
+          {/* Social Share Component */}
+          <div className="border-t border-amber-200 pt-6">
+            <SocialShare
+              achievement="Espresso Quest Master!"
+              description="Just completed the entire Espresso Quest journey! Ready to join the foundation! 🚀☕"
+              url="https://espressosys.com"
+            />
           </div>
         </CardContent>
       </Card>

@@ -47,6 +47,7 @@ export function QuizScreen() {
   const [missedQuestions, setMissedQuestions] = useState<number[]>([]) // Track which questions were missed
   const [retryMode, setRetryMode] = useState(false) // Whether we're retrying missed questions only
   const [helpSuccess, setHelpSuccess] = useState(false)
+  const [showRetryOptions, setShowRetryOptions] = useState(false)
 
   // State for help cost calculation
   const [helpCost, setHelpCost] = useState(0)
@@ -65,11 +66,11 @@ export function QuizScreen() {
     if (timeLeft > 0 && !showResult) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000)
       return () => clearTimeout(timer)
-    } else if (timeLeft === 0 && !showResult) {
-      // Time expired - show help option instead of auto-failing
+    } else if (timeLeft === 0 && !showResult && selectedAnswer === null) {
+      // Only show help option if no answer was selected and time expired
       setShowHelpOption(true)
     }
-  }, [timeLeft, showResult])
+  }, [timeLeft, showResult, selectedAnswer])
 
   /**
    * Question Change Effect
@@ -77,14 +78,15 @@ export function QuizScreen() {
    * Ensures clean state for each new question
    */
   useEffect(() => {
-    setTimeLeft(5)
-    setSelectedAnswer(null)
-    setShowResult(false)
-    setShowHelpOption(false)
-    setHelpUsed(false)
-    setHelpSuccess(false)
-    setHelpCost(0) // Reset help cost when question changes
-  }, [quizProgress.currentQuestion])
+    if (!showHelpOption && !showRetryOptions) {
+      setTimeLeft(5)
+      setSelectedAnswer(null)
+      setShowResult(false)
+      setHelpUsed(false)
+      setHelpSuccess(false)
+      setHelpCost(0)
+    }
+  }, [quizProgress.currentQuestion, showHelpOption, showRetryOptions])
 
   /**
    * Auto-advance Effect
@@ -93,18 +95,32 @@ export function QuizScreen() {
    */
   useEffect(() => {
     if (showResult && !showHelpOption) {
-      const autoAdvanceTimer = setTimeout(() => {
-        handleNextQuestion()
-      }, 2000)
+      const totalQuestions = currentLevelData?.questions.length || 0
+      const isLastQuestion = quizProgress.currentQuestion >= totalQuestions - 1
+      const hasWrongAnswer = selectedAnswer !== currentQuestion?.correct && selectedAnswer !== null
 
-      return () => clearTimeout(autoAdvanceTimer)
+      // If wrong answer on last question, show retry options immediately
+      if (hasWrongAnswer && isLastQuestion) {
+        const timer = setTimeout(() => {
+          setShowRetryOptions(true)
+        }, 2000)
+        return () => clearTimeout(timer)
+      }
+
+      // Normal progression for correct answers or not last question
+      if (!hasWrongAnswer || !isLastQuestion) {
+        const autoAdvanceTimer = setTimeout(() => {
+          handleNextQuestion()
+        }, 2000)
+        return () => clearTimeout(autoAdvanceTimer)
+      }
     }
-  }, [showResult, showHelpOption])
+  }, [showResult, showHelpOption, selectedAnswer, currentQuestion, quizProgress.currentQuestion])
 
   /**
    * Handle Answer Selection
    * Processes user's answer choice and updates quiz progress
-   * Tracks missed questions for potential retry-only mode
+   * When wrong answer is selected, show retry options immediately
    */
   const handleAnswer = (answerIndex: number | null) => {
     if (showResult) return
@@ -117,6 +133,8 @@ export function QuizScreen() {
 
     if (!isCorrect) {
       setMissedQuestions((prev) => [...prev, quizProgress.currentQuestion])
+      // Don't show help options for wrong answers - go straight to retry
+      setShowHelpOption(false)
     }
 
     // Update answer history
@@ -160,13 +178,17 @@ export function QuizScreen() {
   const handleRetryMissedOnly = () => {
     if (missedQuestions.length === 0) return
 
+    console.log("[v0] Starting retry mode for missed questions:", missedQuestions)
     setRetryMode(true)
+    setShowRetryOptions(false)
+
+    // Start with first missed question
     updateQuizProgress({
-      currentQuestion: missedQuestions[0], // Start with first missed question
-      score: quizProgress.score, // Keep existing correct answers
+      currentQuestion: missedQuestions[0],
+      score: quizProgress.score, // Keep correct answers
       answers: quizProgress.answers, // Keep existing answers
     })
-    setMissedQuestions(missedQuestions.slice(1)) // Remove first missed question from list
+    setMissedQuestions(missedQuestions.slice(1)) // Remove first from retry list
   }
 
   /**
@@ -174,8 +196,12 @@ export function QuizScreen() {
    * Traditional restart that resets everything to beginning
    */
   const handleFullRestart = () => {
+    console.log("[v0] Full level restart")
     setRetryMode(false)
     setMissedQuestions([])
+    setShowRetryOptions(false)
+    setShowHelpOption(false)
+
     updateQuizProgress({
       currentQuestion: 0,
       score: 0,
@@ -191,6 +217,16 @@ export function QuizScreen() {
   const handleNextQuestion = () => {
     const totalQuestions = currentLevelData?.questions.length || 0
 
+    console.log("[v0] handleNextQuestion - Current state:", {
+      currentQuest,
+      currentLevel,
+      currentQuestion: quizProgress.currentQuestion,
+      totalQuestions,
+      retryMode,
+      missedQuestions: missedQuestions.length,
+      score: quizProgress.score,
+    })
+
     if (retryMode && missedQuestions.length > 0) {
       updateQuizProgress({
         currentQuestion: missedQuestions[0],
@@ -204,44 +240,63 @@ export function QuizScreen() {
     if (isLastQuestion) {
       const perfectScore = quizProgress.score === totalQuestions
 
-      if (!perfectScore && !helpUsed && missedQuestions.length === 0) {
+      console.log("[v0] Level completion check:", { perfectScore, helpUsed, missedQuestions: missedQuestions.length })
+
+      // If not perfect score and no help used, handle retry
+      if (!perfectScore && !helpUsed) {
+        if (missedQuestions.length > 0) {
+          // Don't auto-restart, let retry options handle it
+          return
+        }
+        // If no missed questions tracked but score isn't perfect, restart
         handleFullRestart()
         return
       }
 
-      if (!perfectScore && missedQuestions.length > 0) {
-        setShowResult(false)
-        return
-      }
-
+      // Perfect score or help was used - complete the level
+      console.log("[v0] Completing level:", currentQuest, currentLevel)
       completeLevel(currentQuest, currentLevel)
 
       const totalLevelsInQuest = currentQuestData?.levels.length || 3
       const isLastLevelInQuest = currentLevel >= totalLevelsInQuest
+
+      console.log("[v0] Level progression check:", {
+        currentLevel,
+        totalLevelsInQuest,
+        isLastLevelInQuest,
+      })
 
       if (isLastLevelInQuest) {
         updateMeetingProgress({
           currentDialogue: 0,
           bossLevel: currentQuest,
         })
+        console.log("[v0] Moving to meeting for quest", currentQuest)
         setCurrentScreen("meeting")
       } else {
         const nextLevel = currentLevel + 1
+        console.log("[v0] Moving to next level:", nextLevel)
         setCurrentLevel(nextLevel)
 
+        // Reset everything for new level
         updateQuizProgress({
           currentQuestion: 0,
           score: 0,
           answers: [],
         })
 
+        // Reset all local state
         setRetryMode(false)
         setMissedQuestions([])
         setSelectedAnswer(null)
         setShowResult(false)
+        setShowHelpOption(false)
+        setShowRetryOptions(false)
         setTimeLeft(5)
       }
     } else {
+      // Move to next question
+      console.log("[v0] Moving to next question:", quizProgress.currentQuestion + 1)
       updateQuizProgress({
         currentQuestion: quizProgress.currentQuestion + 1,
       })
@@ -398,6 +453,44 @@ export function QuizScreen() {
               </div>
             )}
 
+            {/* Retry Options for Wrong Answers */}
+            {showRetryOptions && (
+              <div className="bg-red-50 border border-red-200 p-4 rounded-lg text-center">
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                  <span className="font-semibold text-red-800">Level Failed - 100% Required</span>
+                </div>
+                <p className="text-sm text-red-700 mb-4">
+                  You need to answer all questions correctly. Choose how to retry:
+                </p>
+                <div className="flex gap-2 justify-center flex-wrap">
+                  {missedQuestions.length > 0 && (
+                    <Button
+                      onClick={() => {
+                        setShowRetryOptions(false)
+                        handleRetryMissedOnly()
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Retry Missed Only ({missedQuestions.length} questions)
+                    </Button>
+                  )}
+                  <Button
+                    onClick={() => {
+                      setShowRetryOptions(false)
+                      handleFullRestart()
+                    }}
+                    variant="outline"
+                    className="border-red-300 text-red-700 hover:bg-red-50 bg-transparent"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Restart Entire Level
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Question and answer options */}
             {!showHelpOption && (
               <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-lg border-2 border-amber-200">
@@ -450,7 +543,7 @@ export function QuizScreen() {
             )}
 
             {/* Enhanced result feedback with credit deduction info */}
-            {showResult && (
+            {showResult && !showRetryOptions && (
               <div className="text-center space-y-4">
                 {helpUsed && (
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -486,27 +579,33 @@ export function QuizScreen() {
                     )}
                   </div>
                   {selectedAnswer !== currentQuestion.correct && !helpUsed && (
-                    <p className="text-sm text-gray-700">
+                    <p className="text-sm text-gray-700 mb-3">
                       The correct answer was: <strong>{currentQuestion.options[currentQuestion.correct]}</strong>
                     </p>
                   )}
                 </div>
 
-                <div className="flex flex-col gap-3 items-center">
-                  <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded border">
-                    <ArrowRight className="h-4 w-4 inline mr-1" />
-                    Auto-advancing in 2 seconds...
-                  </div>
+                {/* Only show continue options for correct answers or when not on last question */}
+                {(selectedAnswer === currentQuestion.correct ||
+                  helpUsed ||
+                  (selectedAnswer !== currentQuestion.correct &&
+                    quizProgress.currentQuestion < (currentLevelData?.questions.length || 0) - 1)) && (
+                  <div className="flex flex-col gap-3 items-center">
+                    <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded border">
+                      <ArrowRight className="h-4 w-4 inline mr-1" />
+                      Auto-advancing in 2 seconds...
+                    </div>
 
-                  <Button
-                    onClick={handleNextQuestion}
-                    variant="outline"
-                    size="sm"
-                    className="border-amber-300 text-amber-700 hover:bg-amber-50 bg-transparent"
-                  >
-                    Continue Now
-                  </Button>
-                </div>
+                    <Button
+                      onClick={handleNextQuestion}
+                      variant="outline"
+                      size="sm"
+                      className="border-amber-300 text-amber-700 hover:bg-amber-50 bg-transparent"
+                    >
+                      Continue Now
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
